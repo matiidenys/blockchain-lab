@@ -59,7 +59,7 @@ def perform_mining(transaction):
 
     blockchain_hash_from_previous_block = latest_block_data.get('BlockChainHash', "0" * 64)
     current_nonce = 0
-    difficulty_target_prefix = '0' # Ціль: хеш починається з нуля
+    difficulty_target_prefix = '0000' # Ціль: хеш починається з 4 нулів
 
     print(f"\nПочаток майнінгу для транзакції {transaction.get('TAID', 'N/A')}...")
     start_time = time.time()
@@ -180,6 +180,19 @@ def save_mined_block(mining_results: dict, miner_id: str):
     db = connect_db()
     if db is None:
         print("Не вдалося підключитися до бази даних для збереження блоку та оновлення транзакції.")
+        return False
+
+    try:
+        miner_member_data = db.CnuCoinMembers.find_one({'CNUCoinID': miner_id})
+        if miner_member_data is None:
+            print(f"Помилка: Користувача з ID {miner_id} не знайдено в базі даних.")
+            return False
+        if not miner_member_data.get('IsMiner', False):  # Перевіряємо поле IsMiner
+            print(f"Помилка: Користувач з ID {miner_id} не має прав майнера.")
+            return False
+        print(f"Права майнера для користувача {miner_id} підтверджено.")  # Необов'язковий вивід
+    except Exception as e:
+        print(f"Помилка при перевірці прав майнера для ID {miner_id}: {e}")
         return False
 
     # Отримуємо приватний ключ майнера
