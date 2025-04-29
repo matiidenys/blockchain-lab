@@ -69,7 +69,6 @@ def save_transaction(transaction_data: dict):
         return False
 
     sender_id = transaction_data['From']
-    recipient_id = transaction_data['To']
     amount = transaction_data['TASUM']
 
     # 1. Перевірка балансу відправника
@@ -81,44 +80,23 @@ def save_transaction(transaction_data: dict):
 
     if sender_wallet['Balance'] < amount:
         print(f"Помилка: Недостатньо коштів у відправника {sender_id} для здійснення транзакції.")
-        # У реальній системі, можливо, варто було б зберегти транзакцію зі статусом "failed"
         return False
 
     # 2. Збереження транзакції у колекції Transactions
     try:
         result = db.Transactions.insert_one(transaction_data)
         print(f"Транзакцію {transaction_data['TAID']} успішно збережено.")
+        return result.inserted_id  # Повертаємо ID збереженої транзакції
     except Exception as e:
         print(f"Помилка при збереженні транзакції: {e}")
         return False
 
-    # 3. Оновлення балансів гаманців
-    try:
-        # Зменшуємо баланс відправника
-        db.EWallet.update_one(
-            {'CNUCoinID': sender_id},
-            {'$inc': {'Balance': -amount}} # Використовуємо $inc для атомарного зменшення
-        )
-        print(f"Баланс відправника {sender_id} зменшено на {amount}.")
-
-        # Збільшуємо баланс отримувача
-        db.EWallet.update_one(
-            {'CNUCoinID': recipient_id},
-            {'$inc': {'Balance': amount}} # Використовуємо $inc для атомарного збільшення
-        )
-        print(f"Баланс отримувача {recipient_id} збільшено на {amount}.")
-
-        return result.inserted_id # Повертаємо ID збереженої транзакції
-    except Exception as e:
-        print(f"Помилка при оновленні балансів гаманців: {e}")
-        # У реальній системі, можливо, потрібна логіка відкату або компенсації
-        return False
 
 # Приклад використання:
 if __name__ == "__main__":
-    sender_real_id = "011c8aa9e79970c0846d9bda2f9c09d42a83ba805efb2a86d341686584b7249b"
-    recipient_real_id = "bcef5c9a92a1e2a00173be08d4abddd65b018232c395ac32ad7a0c49801aa375"
-    amount_to_send = 10.0 # Сума транзакції
+    sender_real_id = "bcef5c9a92a1e2a00173be08d4abddd65b018232c395ac32ad7a0c49801aa375"
+    recipient_real_id = "011c8aa9e79970c0846d9bda2f9c09d42a83ba805efb2a86d341686584b7249b"
+    amount_to_send = 4.4 # Сума транзакції
 
     print(f"Створення та обробка транзакції від {sender_real_id} до {recipient_real_id} на суму {amount_to_send}")
 
@@ -131,8 +109,8 @@ if __name__ == "__main__":
         saved_transaction_id = save_transaction(signed_transaction)
 
         if saved_transaction_id:
-            print(f"\nТранзакцію з ID {saved_transaction_id} успішно збережено та баланси оновлено.")
+            print(f"\nТранзакцію з ID {saved_transaction_id} успішно збережено.")
         else:
-            print("\nНе вдалося обробити транзакцію (зберегти або оновити баланси).")
+            print("\nНе вдалося обробити транзакцію (зберегти).")
     else:
         print("Не вдалося створити або підписати транзакцію.")
